@@ -18,20 +18,23 @@ All of the SPI displays listed on the Waveshare Wiki at the time of writing are 
   - **EPD 2.13" B (black/white/red)**
   - **EPD 2.13" C (black/white/yellow)** - should work with `EPD2in13b`
   - **EPD 2.13" D (monochrome, flexible)**
+  - **EPD 2.13" v2 (only full refresh)**
   - **EPD 2.7" (monochrome)**
   - **EPD 2.7" B (black/white/red)**
   - **EPD 2.9" (monochrome) - [probably works, with partial refresh]**
   - **EPD 2.9" B (black/white/red)**
   - **EPD 2.9" C (black/white/yellow)** - should work with `EPD2in9b`
-  - **EPD 4.2" (monochrome)**
+  - **EPD 4.2" (monochrome)** [TESTED, with partial refresh]
   - **EPD 4.2" B (black/white/red)**
   - **EPD 4.2" C (black/white/yellow)** - should work with `EPD4in2b`
   - **EPD 5.83" (monochrome)**
   - **EPD 5.83" B (black/white/red)**
   - **EPD 5.83" C (black/white/yellow)**
   - **EPD 7.5" (monochrome)**
+  - **EPD 7.5" (monochrome, GDEW075T7, only full refresh)**
   - **EPD 7.5" B (black/white/red)**
   - **EPD 7.5" C (black/white/yellow)** - should work with `EPD7in5b`
+  - **Displays using the IT8951 controller (6", 7.8", 9.7", 10.3")**
 - **Special drivers**
   - **Dummy - no-op driver**
   - **Bitmap - output frames as bitmap files (for debugging)**
@@ -71,7 +74,7 @@ Functionality has not (intentionally) been removed from the drivers so you shoul
 # This will draw a black rectangle to the corner of the display (2.13" B/W)
 
 # Import the required driver/group
-import drivers.drivers_partial as drivers_partial
+from papertty import drivers as drivers_partial
 from PIL import Image, ImageDraw
 
 # Instantiate

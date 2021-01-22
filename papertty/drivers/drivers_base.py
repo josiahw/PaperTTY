@@ -16,9 +16,18 @@
 
 from abc import ABC, abstractmethod
 from PIL import Image
-import spidev
-import RPi.GPIO as GPIO
+
 import time
+
+# if rpi libs are not found, don't care - hope that we don't end up
+# using them
+try:
+    import spidev
+    import RPi.GPIO as GPIO
+except ImportError:
+    pass
+except RuntimeError as e:
+    print(str(e))
 
 
 class DisplayDriver(ABC):
@@ -56,9 +65,15 @@ class DisplayDriver(ABC):
     def fill(self, color, fillsize):
         """Slow fill routine"""
         image = Image.new('1', (fillsize, self.height), color)
-        for x in range(0, self.width, fillsize):
+        for x in range(0, self.height, fillsize):
             self.draw(x, 0, image)
 
+    def clear(self):
+        """Clears the display"""
+        image = Image.new('1', (self.height, self.width), self.black)
+        self.draw(0, 0, image)
+        image = Image.new('1', (self.height, self.width), self.white)
+        self.draw(0, 0, image)
 
 class SpecialDriver(DisplayDriver):
     """Drivers that don't control hardware"""
@@ -143,7 +158,6 @@ class WaveshareEPD(DisplayDriver):
     ROTATE_270 = 0x03
 
     # SPI device, bus = 0, device = 0
-    SPI = spidev.SpiDev(0, 0)
 
     # SPI methods
 
@@ -169,6 +183,7 @@ class WaveshareEPD(DisplayDriver):
         GPIO.setup(self.DC_PIN, GPIO.OUT)
         GPIO.setup(self.CS_PIN, GPIO.OUT)
         GPIO.setup(self.BUSY_PIN, GPIO.IN)
+        self.SPI = spidev.SpiDev(0, 0)
         self.SPI.max_speed_hz = 2000000
         self.SPI.mode = 0b00
         return 0

@@ -1,5 +1,19 @@
 # Changelog
 
+- **2020-03-01**
+  - Added partial refresh support for 4.2".
+- **2020-02-18**
+  - Added interactive mode.
+- **2020-01-25**
+  - Added support for more cursors.
+- **2020-01-22**
+  - Added Unicode support for systems providing /dev/vcsu
+- **2019-12-07**
+  - Added basic support for EPD7in5v2 (GDEW075T7)
+- **2019-11-03**
+  - Added IT8951 support
+- **2019-07-07**
+  - Added VNC / GUI support
 - **2018-08-31**
   - Installation instructions had an issue: running with `sudo` didn't respect the virtualenv - fixed
 - **2018-08-26**

@@ -1,8 +1,153 @@
 # PaperTTY
 
+
+## PyPi!
+
+**This is still WIP.**
+
+You can now install PaperTTY via PyPi. The updated (simplified) documentation is still a bit unfinished and things moved around somewhat, so the rest of this page is not quite up to date yet on all details.
+
+TL;DR:
+
+```sh
+sudo apt install python3-venv python3-pip libopenjp2-7 libtiff5
+# # optionally configure a virtualenv before running pip:
+# python3 -m venv papertty_venv
+# source papertty_venv/bin/activate
+pip3 install papertty
+```
+
+
+----
+
+## Image display command
+
+@colin-nolan has contributed a subcommand to display image files on the screen, allowing to test the displays or easily make a photo slideshow or similar. Try `image --help` to check it out.
+
+## Partial refresh support for 4.2" *(2020-03-01)*
+
+Thanks to @gdkrmr, the 4.2" module now has a new driver that supports partial refresh. Note that now the default behavior is to do partial updates and you'll need to add `--nopartial` to driver settings if you want to use the full refresh instead.
+
+## Interactive Update *(2020-02-18)*
+
+Starting `terminal` with the `--interactive` option adds a menu to the Ctrl-C handler that allows you to change the font, font size and spacing on the fly. This should be helpful when trying out fonts.
+
+## Cursor Update *(2020-01-25)*
+
+The `terminal` mode now supports different cursors. `--nocursor` had been deprecated in favor of `--cursor=none`. The usual underscore-like cursor is set via `--cursor=default`, which, as the name suggests, is also the default mode. There is also a `--cursor=block` option, which inverts the colors at the cursor's location. Finally, there is also an option to provide a numerical value, e.g. `--cursor=5`, which draws an underscore cursor shifted 5 pixels towards the top; `--cursor=default` and `--cursor=0` are thus equivalent.
+
+## Unicode Update *(2020-01-22)*
+
+On systems with /dev/vcsu* (e.g. Raspbian Stretch or Buster, with kernel 4.19+) and when using a TrueType font, the `terminal` mode now has full support for Unicode output. This is automatic, with a fallback to 8-bit if either of these requirements isn't met. We've also changed the standard encoding for 8-bit to ISO-8859-1, which should be a little closer to what the `vcs` device provides.
+
+## IT8951 Optimization II *(2020-01-15)*
+
+The previous optimization was improved further to speed up VNC output too. If you try it, please leave a comment at https://github.com/joukos/PaperTTY/issues/32 (and create a new issue if there's problems).
+
+## IT8951 Optimization *(2020-01-11)*
+
+An optimization by @chi-lambda for the IT8951 driver was merged and may speed up the bit-packing in TTY mode even by up to **10x** for these displays, so the refresh rates should be significantly better now. Please create an issue if there are problems (the unoptimized version can be checked out with the tag `v0.03_unoptimized`).
+
+## IT8951 Update *(2019-11-03)*
+
+Support for IT8951 based displays kindly provided by @fimad has been merged. This means that Waveshare 6", 7.8", 9.7" and 10.3" may work since they use this controller. At least the 6" and 9.7" displays have been verified to work. A big thanks to everyone involved with the discussion and code contributions (https://github.com/joukos/PaperTTY/issues/25)!
+
+If you have one of these displays and want to test it, add your experiences to https://github.com/joukos/PaperTTY/issues/32.
+
+Here is a picture of the 9.7" in action (by @math85360):
+
+![](pics/vnc_97_inch_by_math85360.jpg)
+
+[YouTube video](https://www.youtube.com/watch?v=J5WbhSV2E_U)
+
+## VNC Update *(2019-07-07)*
+
+So, it's been almost a year since last update and I've been very very busy.
+
+Since I'm going to be even *busier* for the next two years or so, and probably won't have much time to spend on this project, I wanted to see if I could kludge this one last thing that I think is needed (and was referenced in https://github.com/joukos/PaperTTY/issues/23#issuecomment-435578128): a VNC client to PaperTTY.
+
+**I'm happy to announce that it works!** It's not the most elegant or beautiful thing, but now you can run a graphical desktop and any programs you wish on these epaper screens. It also solves many problems and complexities with text-only terminals, namely encoding/font issues and other quirks. I've tested it with the 4.2" and the 2.13" displays.
+
+The performance is pretty much the same as before, maybe a tad more image processing though, but the bottleneck is the display refresh anyway. All the complex stuff is done by [vncdotool](https://github.com/sibson/vncdotool) by Marc Sibson, since it was the most mature-seeming VNC library I could find that would work with Python 3 without extra work. It's also overkill for the job - all that's needed is to read the screen content periodically.
+
+The way this works is pretty simple: PaperTTY will connect to the VNC server, then just reads the screen content in a loop. If the image changes, the region containing the changes will be updated on the display. This is not actually very efficient and originally I planned to have it update the native VNC "dirty rectangles", but it was simpler to kludge it like this for a start, and it seems to work fine, so it's perhaps easier to make better now.
+
+### Some benefits and features
+
+- **Run all CLI *and* GUI programs**
+- Dithers colors so you can throw anything at it and hopefully it's legible on the display
+- About as fast as just using the terminal mode, but much less hassle (sort of)
+- Has options for rotating and inverting the colors
+- Rescales the VNC screen to fit the display (panning not implemented)
+- Simplistic, surely buggy and doesn't fix the other problems PaperTTY might have
+
+### Quick start
+
+- Install PaperTTY from PyPi: 
+   - `pip install papertty`
+- Start a VNC server somewhere (on the RPi for example)
+   - ie. `vncserver -geometry 250x128 :1`
+- Run PaperTTY as usual, but use the `vnc` subcommand (see `--help` for options)
+   - ie. `sudo papertty --driver epd2in13 vnc --display 1 --password supAPass --sleep 0.1 --rotate 90`
+   - This would (by default) connect to `localhost`, display `1` (= port 5901), using the 2.13" driver, specifies the password, sleeps 0.1 seconds after each update, and rotates the screen by 90 degrees
+- If image looks wonky, make sure you have the right orientation for the VNC server (ie. `-geometry 300x400` vs. `-geometry 400x300`) and the correct `--rotate` value.
+
+### Standalone RPi with mouse and keyboard
+
+So, you have your nice display and a RPi that you want to combine into a cool e-ink laptop, using peripherals plugged into the RPi. There's currently no automation or service files for this purpose, but what you can try is this (for the 2.13"):
+
+- Install or enable a desktop environment / window manager, unless it already exists (ie. if you plug in the HDMI port, you should get a graphical session)
+- Install `x11vnc` on the RPi
+- Plug in keyboard and mouse
+- Start a `tmux` session on the RPi and run the following commands, in their own windows (to easily find out if something goes wrong)
+- ```sh
+  # tmux window/pane #0
+  sudo lightdm    # start lightdm if not already started
+  export $(sudo x11vnc -findauth)	# find the X authority file (probably /var/run/lightdm/root/:0)
+  sudo x11vnc -usepw -display :0 -forever	# start x11vnc
+  # tmux window/pane #1
+  sudo papertty --driver epd2in13 scrub      # scrub for clear image
+  sudo papertty --driver epd2in13 vnc --display 0 --password supAPass --sleep 0.1 --rotate 90   # display the session
+  ```
+- If all went well, you should now be able to see the login screen (or whatever is in your display :0) and can interact with the GUI using mouse and keyboard plugged into the RPi, making it a cool standalone unit.
+
+**Here's a quick video showing this in action**
+
+[![YouTube Video](https://img.youtube.com/vi/Kpohs9iqUBk/0.jpg)](https://www.youtube.com/watch?v=Kpohs9iqUBk)
+
+The RPi Zero W is quite sluggish though and the default resolution was used here, so downscaling it to 2.13" makes it pretty unreadable even without the background images and other crud. It's a proof of concept anyway and just needs a bit of polish.
+
+I'll try to add more details later if I have time, but here's some more screenshots:
+
+**FreeCiv, downscaled from 800x600**
+
+![](pics/vnc_freeciv.jpg)
+
+**IRC and surfing action**
+
+![](pics/vnc_irc.jpg)
+
+**Freedoom, why not**
+
+![](pics/vnc_freedoom.jpg)
+
+**Early image of testing some X progs**
+
+![](pics/vnc.jpg)
+
+**And a YouTube video to showcase some partial refresh action**
+
+[![YouTube Video](https://img.youtube.com/vi/3o9Z2Ujdr9Q/0.jpg)](https://www.youtube.com/watch?v=3o9Z2Ujdr9Q)
+
+As always, create issues if there's problems. I'd also be very interested if someone with a 9.7" display gets this to work with partial refresh.
+
+*The rest of this page is not updated to cover the VNC feature yet.*
+
+--- 
+
 ![](pics/logo.jpg)
 
-This is an experimental command-line driven Python module to render the contents of a Linux virtual terminal (`/dev/tty[1-63]`) **or standard input** onto a [Waveshare](https://www.waveshare.com/) e-Paper display. See [list of supported displays](drivers/README.md).
+This is an experimental command-line driven Python module to render the contents of a Linux virtual terminal (`/dev/tty[1-63]`) **or standard input** onto a [Waveshare](https://www.waveshare.com/) e-Paper display. See [list of supported displays](papertty/drivers/README.md).
 
 *Note: Testing has been minimal and I probably forgot something, so 'caveat utilitor'. I am also not affiliated with Waveshare in any way.*
 
@@ -53,7 +198,7 @@ All of the code was written for Raspbian Stretch and Python 3.5+. These instruct
 
 The code includes a reimplementation/refactoring of the Waveshare [reference drivers](https://github.com/soonuse/epd-library-python) - unlike the rest of the code which is CC0, **the drivers have the GPL 3.0 license**, because that's what Waveshare used. The drivers for models that aren't in the repo have been acquired from their Wiki's demo code packages.
 
-See the [driver page](drivers/) for details and the supported models.
+See the [driver page](papertty/drivers/) for details and the supported models.
 
 *The earlier, initial version of PaperTTY (tag: `v0.01`) did not have instructions for using virtualenv (though it would work) - you can still run it as before using the system packages and alongside this new version. Using the virtualenv means that PIL and Pillow can also coexist on the same system.*
 
@@ -65,29 +210,21 @@ See the [driver page](drivers/) for details and the supported models.
 
 #### Steps
 
-1. **Clone the repo somewhere and enter the directory**
-   - `git clone https://github.com/joukos/PaperTTY.git`
-   - `cd PaperTTY`
-2. **Install virtualenv and libopenjp2**
-   - `sudo apt install virtualenvwrapper python3-virtualenv libopenjp2-7`
+1. **Install virtualenv, libopenjp2 and libtiff5**
+   - `sudo apt install virtualenvwrapper python3-virtualenv libopenjp2-7 libtiff5`
 3. **Source the wrapper to use `mkvirtualenv` (*you may want to add this to `~/.bashrc`*)**
    - `source /usr/share/virtualenvwrapper/virtualenvwrapper.sh`
 4. **Create the Python 3 virtualenv and install packages in `requirements.txt`**
-   - `mkvirtualenv -p /usr/bin/python3 -r requirements.txt papertty`
+   - `mkvirtualenv -p /usr/bin/python3 -i papertty requirements.txt papertty`
    - This will create `~/.virtualenvs/papertty` which contains the required environment
 5. **After creating the virtualenv, it should become active and you should see `(papertty)` on your prompt**
    - **Note:** the software needs to be run with `sudo` in the typical case, *so you need to explicitly start the interpreter within the virtualenv - otherwise the program attempts to import system packages instead*
-   - **You should now be able to run `sudo ~/.virtualenvs/papertty/bin/python3 ./papertty.py list` to see the available drivers and start using the software**
+   - **You should now be able to run `sudo papertty list` to see the available drivers and start using the software**
 6. **Not really needed, but to (de)activate the virtualenv afterwards, run:**
    -  `~/.virtualenvs/papertty/bin/activate` - activate the virtualenv
       -  Or, `workon papertty` if you have sourced `virtualenvwrapper.sh`
    -  `deactivate` - deactivate the virtualenv
 
-#### Alternative install without virtualenv, using system packages
-
-- If you don't care to use the virtualenv, just install the requirements as system packages:
-  - `sudo apt install python3-rpi.gpio python3-spidev python3-pil python3-click`
-  - And run the program directly: `sudo ./papertty.py list`
 
 ## Fonts
 
@@ -122,7 +259,7 @@ All font options expect a path to the font file - the system font directories ar
 
 ## Usage
 
-**If you have the requirements installed in a virtualenv, remember to use its interpreter when running the program with sudo or being root:**  `sudo ~/.virtualenvs/papertty/bin/python3 ./papertty.py` 
+**If you have PaperTTY installed in a virtualenv, remember to use its interpreter when running the program with sudo or being root:**  `sudo ~/.virtualenvs/papertty/bin/python3 papertty` 
 
 - You'll want to `sudo` unless you've set it up so that SPI works without and you've given read access to `/dev/vcsa*`
 
@@ -152,7 +289,7 @@ These should come before the subcommands and they control general settings.
 
 ```sh
 # Example
-sudo ./papertty.py list
+sudo papertty list
 ```
 
 #### `scrub` - Scrub display
@@ -169,7 +306,7 @@ Option | Description | Default
 
 ```sh
 # Example
-sudo ./papertty.py --driver epd2in13 scrub
+sudo papertty --driver epd2in13 scrub
 ```
 
 #### `stdin` - Render standard input
@@ -188,7 +325,7 @@ Option | Description | Default
 
 ```sh
 # Example
-cowsay "Hello World" | sudo ./papertty.py --driver epd2in13 stdin --nofold
+cowsay "Hello World" | sudo papertty --driver epd2in13 stdin --nofold
 ```
 
 #### `terminal` - Render a virtual terminal
@@ -231,14 +368,14 @@ Option | Description | Default
 # Examples
 
 # by default the first virtual terminal (/dev/vcsa1 == /dev/tty1) is displayed
-sudo ./papertty.py --driver epd2in13 terminal
+sudo papertty --driver epd2in13 terminal
 
 # set font size to 16, update every 10 seconds, set terminal rows/cols to 10x20
-sudo ./papertty.py --driver epd2in13 terminal --size 16 --sleep 10 --rows 10 --cols 20
+sudo papertty --driver epd2in13 terminal --size 16 --sleep 10 --rows 10 --cols 20
 
 # auto-fit terminal rows/cols for the font and use a bitmap font
 # (fitting may not work for very small fonts in portrait mode because of terminal restrictions)
-sudo ./papertty.py --driver epd2in13 terminal --autofit --font myfont.pil
+sudo papertty --driver epd2in13 terminal --autofit --font myfont.pil
 ```
 
 ## How to use the terminal
@@ -294,7 +431,7 @@ To have the display turn on at boot, first **edit** the command you're happy wit
 # Also, when booting up after a power cycle the display may have some artifacts on it, so 
 # you may want to add --scrub to get a clean display (during boot it's a bit slower than usual)
 VENV="/home/pi/.virtualenvs/papertty/bin/python3"
-${VENV} papertty.py --driver epd2in13 terminal --autofit
+${VENV} papertty --driver epd2in13 terminal --autofit
 ```
 
 Then make sure you have the right paths set in the service file:
@@ -390,7 +527,6 @@ Some notes:
     - The `scrub` feature may be entirely unnecessary for normally functioning units
 - The code is surely littered with bugs and could use some refactoring
 - You need to figure out the parameters, font and encodings that work for *you*
-  - Importantly, Unicode support is lacking because the virtual terminal stores glyph indices in the buffer and the original value is lost in translation - my understanding is that there is currently development [being done](https://lkml.org/lkml/2018/6/26/1062) for the kernel to implement `/dev/vcsu*` which would rectify this, but it's not yet in the mainline kernel - option to use a pseudo TTY would be welcome in the mean time
 - Not much thought given to tricolor displays - you need to modify the part where attributes are skipped and implement it yourself (or donate such a display and I might take a look...)
 - Minimal error handling
 - You can't set an arbitrary size for the terminals with `ioctl`s - it would be better to use some pseudo terminal for this but then again, sometimes you specifically want `tty1` (imagine server crashing and having the kernel log imprinted on the e-ink)
